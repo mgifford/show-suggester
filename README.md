@@ -1,53 +1,45 @@
 # 🎬 Show Suggester
 
-A no-auth, client-side recommendation engine that helps you discover great films and TV shows based on your preferences. Built with vanilla JavaScript and powered by a curated local seed dataset of diverse, quality films.
+**Discover films you'll actually love—based on what you've already loved.**
 
-**Currently includes:** 104 carefully curated films from 14 diverse sources: environmental documentaries, social justice films, Oscar winners, AFI classics, international cinema, LGBTQ+ films, diverse directors, recent releases, and more. Expandable to thousands via Python updater script.
+A privacy-first film recommendation engine that runs entirely in your browser. No login. No tracking. No endless scrolling. Just smart recommendations powered by your taste.
 
-## 🎯 Project Goals
+---
 
-- **Quality over Quantity**: Curated seed of ethically-conscious and critically-acclaimed films
-- **Films AND TV Shows**: One interface for all visual entertainment
-- **Privacy-First**: No tracking, no accounts, no data leaves your browser
-- **Explainable**: Understand WHY shows are recommended based on visible criteria
-- **Instant Loading**: No waiting for APIs - seed data loads immediately from static file
+## 🎯 Why Show Suggester?
 
-## 🚀 Quick Start
+Most recommendation algorithms optimize for **engagement** (keeping you scrolling). Show Suggester optimizes for **satisfaction** (showing you films you'll genuinely enjoy).
 
-### Try It Now (Locally)
-1. Clone this repository or download the files
-2. Open `index.html` in a modern web browser (or use local server: `python3 -m http.server 8765`)
-3. The app loads instantly with 104 curated seed films from `seed-films.json`
-4. Start rating films!
-5. Use Python script to expand dataset (see [SEED_UPDATER.md](SEED_UPDATER.md))
+- 🔒 **100% Offline** - Your ratings stay on your device. Zero tracking.
+- 🚀 **Instant Load** - 6,000+ films with posters, ready to go
+- 💡 **Smart Algorithm** - Content-based filtering (transparent, not a black box)
+- 🎨 **Beautiful UI** - Movie posters, responsive design, dark mode ready
+- 🌍 **Diverse Films** - Oscars, International Cinema, Documentaries, LGBTQ+, and more
+- 📤 **Export to AI** - Copy ratings to ChatGPT/Claude for personalized insights
+- 📖 **No Setup** - Works immediately, no login required
 
-### Deploy to GitHub Pages
-1. Fork or upload this repository to GitHub
-2. Go to repository **Settings** → **Pages**
-3. Under "Source", select **Deploy from a branch**
-4. Select the `main` branch and `/ (root)` folder
-5. Click **Save**
-6. Your site will be live at `https://yourusername.github.in/show-suggester/`
+**[Try it now →](https://mgifford.github.io/show-suggester/)** | **[Star on GitHub](https://github.com/mgifford/show-suggester)**
 
-## 📖 How to Use
+---
 
-1. **Initial Load**: The app loads instantly with 104 curated seed films from local JSON
-2. **Set Filters**: Use dropdown menus to filter by year range (All Years, Last 20 Years, Last 2 Years) and runtime (All Lengths, Short <90min, Medium 90-150min, Long >150min)
-3. **Rate Films**: A random batch of 15-20 films appears with large poster images. Rate each as 👍 Like, 😐 Neutral, or 👎 Dislike
-4. **Add Notes**: Optionally explain why you liked/disliked each film
-5. **Load Random Batch**: Click to load a new set of unrated films (won't repeat recently shown films)
-6. **View My Ratings**: Click to see all films you've rated and manage them
-7. **Get Recommendations**: Click "Show Recommendations" to see films similar to ones you liked
-8. **Copy for LLM**: Click "📋 Copy for LLM" to copy your ratings as YAML and paste into ChatGPT/Claude for personalized suggestions
-9. **Export/Import**: Save your ratings as YAML file to reload later or share
+## ✨ Features
 
-## 🎯 Features
+### 🎞️ Core Features
+- **6,000+ Films** with beautiful posters (from Bechdel Test API, IMDb, curated sources)
+- **Smart Recommendations** - Finds films similar to ones you loved (70% best match + 30% average for diverse tastes)
+- **Responsive Design** - Beautiful on desktop, phone, tablet
+- **Rating Tags** - Label your likes: visually-striking, emotional, idea-driven, dark-bleak, comedic-chaos, slow-paced
+- **Export to LLM** - Copy ratings as YAML → paste into ChatGPT/Claude for deeper analysis
+- **Offline-First** - Works completely offline after first load
 
-### User Interface
-- **Full-Width Responsive Layout**: Desktop mode has resizable sidebar (33.33% width, adjustable) + main content area
-- **Mobile-Optimized**: Single-column layout with sidebar on top, simplified controls
-- **Large Film Posters**: 400px poster images as primary visual element (300px on mobile)
-- **Elegant Dropdown Filters**: Year range (All, Last 20, Last 2) and runtime (All, Short <90min, Medium 90-150min, Long >150min)
+### 📊 For Power Users
+- **Two Datasets** - Core (1,500 recognizable films) or Extended (6,000+ full collection)
+- **Smart Filters** - Filter by year range and runtime
+- **Recently Shown Tracking** - Avoids repeating films in batches
+- **Import/Export** - Save/restore ratings as YAML files
+- **Algorithm Transparency** - See exactly why films are recommended
+
+---
 - **My Ratings View**: Collapsible section showing all rated films with ability to remove ratings
 - **Recently Shown Tracking**: Random batches avoid showing the same films repeatedly
 
@@ -447,4 +439,74 @@ show-suggester/
 
 ---
 
-**Last Updated:** January 1, 2026
+## 🤝 Contributing
+
+**Show Suggester is actively looking for collaborators!**
+
+We welcome contributions from developers of all skill levels. Whether you're interested in JavaScript, Python, data, design, or just love films—there's something for you.
+
+### How to Contribute
+
+1. **Fork the repository**
+2. **Pick an area** (see below)
+3. **Make changes**
+4. **Submit a pull request**
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines, setup instructions, and ideas for projects.
+
+### We Need Help With
+
+| Area | Difficulty | What We're Looking For |
+|------|-----------|------------------------|
+| **Frontend (JS/HTML/CSS)** | Beginner-Advanced | Mobile optimization, UI enhancements, accessibility, new filters |
+| **Python (Data)** | Beginner-Intermediate | Expand film sources (Criterion, festivals), improve dataset quality |
+| **Film Curation** | Beginner | Create themed film lists, find new quality sources |
+| **Documentation** | Beginner | Write tutorials, improve README, add code comments |
+| **Testing/QA** | Beginner | Test on different devices/browsers, report bugs |
+| **DevOps/Performance** | Intermediate-Advanced | Optimize for 10K+ films, improve load times |
+
+### Getting Started
+
+```bash
+# 1. Fork and clone
+git clone https://github.com/YOUR-USERNAME/show-suggester.git
+cd show-suggester
+
+# 2. Set up local environment
+python3 -m venv .venv
+source .venv/bin/activate
+pip install requests feedparser python-dotenv
+
+# 3. Start server
+python3 -m http.server 8765
+# Visit: http://localhost:8765
+
+# 4. Make changes and submit PR!
+```
+
+**First time contributing?** Don't worry! We have issues labeled `good first issue` and `help wanted`. Pick one and ask questions in the PR.
+
+### Recognition
+
+All contributors are:
+- ⭐ Added to [CONTRIBUTORS.md](CONTRIBUTORS.md)
+- 📌 Credited in commit messages
+- 📢 Featured in release notes
+
+---
+
+## 📣 Share This Project
+
+Help us find collaborators! Use the copy in [SOCIAL_MEDIA.md](SOCIAL_MEDIA.md) to share on:
+- Twitter/X
+- LinkedIn
+- Reddit
+- Dev.to
+- Discord
+- Your network!
+
+**Questions?** Open an [Issue](../../issues) or start a [Discussion](../../discussions).
+
+---
+
+**Last Updated:** January 2, 2026
