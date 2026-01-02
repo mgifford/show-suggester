@@ -20,6 +20,16 @@ from datetime import datetime
 from collections import defaultdict
 from urllib.parse import urljoin
 import sys
+import os
+from pathlib import Path
+
+# Load environment variables from .env file
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("[WARNING] python-dotenv not installed. Install with: pip install python-dotenv")
+    print("[WARNING] Falling back to environment variables or hardcoded values")
 
 # Configuration
 BECHDEL_API = 'https://bechdeltest.com/api/v1/getAllMovies'
@@ -28,6 +38,13 @@ IMDB_LIST_URL = 'https://www.imdb.com/list/ls025352086/'
 SEED_FILE = 'seed-films.json'
 CORE_OUTPUT_FILE = 'core-films.json'  # Recognizable films (default)
 EXTENDED_OUTPUT_FILE = 'extended-films.json'  # Full dataset (optional)
+
+# TMDb API for poster images (free tier: 1000 requests/day)
+# Get your free API key at: https://www.themoviedb.org/settings/api
+# Store in .env file as: TMDB_API_KEY=your_key_here
+TMDB_API_KEY = os.getenv('TMDB_API_KEY')  # Loaded from .env file
+TMDB_SEARCH_URL = 'https://api.themoviedb.org/3/search/movie'
+TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500'
 
 # Filtering config for core dataset
 CORE_MIN_YEAR = 1974  # Last 50 years
@@ -97,7 +114,7 @@ class DataExpander:
                     'runtime': None,
                     'source': 'bechdel',
                     'bechdel_rating': int(film.get('rating', 0)),
-                    'poster_url': self.get_imdb_poster_url(film.get('imdbid')),
+                    'poster_url': self.get_poster_url(film.get('title'), film.get('year'), film.get('imdbid')),
                     'wikidataUrl': None
                 }
                 
@@ -149,7 +166,7 @@ class DataExpander:
                     'castQIDs': [],
                     'runtime': None,
                     'source': 'bechdel-rss',
-                    'poster_url': self.get_imdb_poster_url(imdb_id),
+                    'poster_url': self.get_poster_url(entry.get('title', '').split('(')[0].strip(), self.extract_year(entry.get('title', '')), imdb_id),
                     'wikidataUrl': None,
                     'description': entry.get('summary', '')[:200]
                 }
@@ -187,21 +204,38 @@ class DataExpander:
         except Exception as e:
             print(f"[IMDB] Could not fetch top 250: {e}")
     
-    def get_imdb_poster_url(self, imdb_id):
-        """Get poster URL from IMDb ID"""
-        if not imdb_id:
-            return None
+    def get_poster_url(self, title, year, imdb_id=None):
+        """Get poster URL from TMDb API or fallback"""
+        # If TMDb API key is configured, use it
+        if TMDB_API_KEY:
+            return self.get_tmdb_poster(title, year)
         
-        # IMDb poster structure (may not always work)
-        # Better approach: use TMDb API if you have a key
+        # Fallback: Return IMDb link (not a direct image, but better than nothing)
+        if imdb_id:
+            return f"https://www.imdb.com/title/{imdb_id}/"
+        
+        return None
+    
+    def get_tmdb_poster(self, title, year):
+        """Fetch poster URL from TMDb API"""
         try:
-            # Try to get from IMDb
-            url = f"https://www.imdb.com/title/{imdb_id}/"
-            response = requests.head(url, timeout=5, allow_redirects=True)
-            if response.status_code == 200:
-                # Return the IMDb title URL which has the poster
-                return url
-        except:
+            params = {
+                'api_key': TMDB_API_KEY,
+                'query': title,
+                'year': year
+            }
+            response = requests.get(TMDB_SEARCH_URL, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            if data.get('results') and len(data['results']) > 0:
+                poster_path = data['results'][0].get('poster_path')
+                if poster_path:
+                    return f"{TMDB_IMAGE_BASE}{poster_path}"
+        except Exception as e:
+            print(f"[TMDB] Error fetching poster for {title}: {e}")
+        
+        return None
             pass
         
         return None

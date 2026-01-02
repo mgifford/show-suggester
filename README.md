@@ -79,6 +79,39 @@ A no-auth, client-side recommendation engine that helps you discover great films
 - **YAML Import/Export**: Save and restore all ratings with human-readable format
 - **Where to Watch**: Direct links to JustWatch (Canada/UK) and streaming search
 
+## 🖼️ Adding Movie Posters
+
+Film cards support poster images for better visual recognition. To enable posters:
+
+1. **Get a free TMDb API key**: Visit [TMDb API Settings](https://www.themoviedb.org/settings/api)
+   - Create a free account
+   - Request a developer API key (no credit card required)
+   - Copy your API key (starts with a long string of letters/numbers)
+
+2. **Configure the environment**: Copy the example environment file and add your key:
+   ```bash
+   cp example.env .env
+   ```
+   Edit `.env` and set:
+   ```bash
+   TMDB_API_KEY=your_api_key_here
+   ```
+
+3. **Install python-dotenv** (if not already installed):
+   ```bash
+   pip install python-dotenv
+   ```
+
+4. **Fetch posters**: Run the dataset expansion script:
+   ```bash
+   python3 expand_dataset.py
+   ```
+   This will fetch poster URLs for all 6,000+ films and update both datasets.
+
+5. **Refresh the app**: Reload the browser to see poster images on all film cards.
+
+**Note**: Posters are optional—the app works perfectly without them. The `.env` file is git-ignored so your API key stays private. See [POSTERS.md](POSTERS.md) for detailed instructions and troubleshooting.
+
 ## 🏗️ Architecture Overview
 
 ### Current Data Flow

@@ -970,7 +970,15 @@ LIMIT 5000
         const exportData = this.buildExportData();
         const yaml = this.convertToYAML(exportData);
         
+        // Check if clipboard API is available
+        if (!navigator.clipboard) {
+            alert('Clipboard API not available. Please use HTTPS or localhost, or try the "💾 Download YAML" button instead.');
+            this.updateStatus('❌ Clipboard not available. Try Download button.');
+            return;
+        }
+        
         try {
+            // Use writeText with proper error handling
             await navigator.clipboard.writeText(yaml);
             this.updateStatus('✅ Copied to clipboard! Paste into ChatGPT, Claude, or any LLM.');
             
@@ -985,9 +993,37 @@ LIMIT 5000
                 btn.style.background = '';
             }, 2000);
         } catch (error) {
-            console.error('Failed to copy:', error);
-            alert('Could not copy to clipboard. Please use the "💾 Download YAML" button instead, or check browser permissions.');
-            this.updateStatus('❌ Copy failed. Try the Download button or check permissions.');
+            console.error('Clipboard error:', error);
+            
+            // Fallback: try older execCommand method
+            try {
+                const textArea = document.createElement('textarea');
+                textArea.value = yaml;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                
+                if (successful) {
+                    this.updateStatus('✅ Copied to clipboard! (using fallback method)');
+                    const btn = event.target;
+                    const originalText = btn.textContent;
+                    btn.textContent = '✅ Copied!';
+                    btn.style.background = '#10b981';
+                    setTimeout(() => {
+                        btn.textContent = originalText;
+                        btn.style.background = '';
+                    }, 2000);
+                } else {
+                    throw new Error('execCommand failed');
+                }
+            } catch (fallbackError) {
+                console.error('Fallback copy failed:', fallbackError);
+                alert('Could not copy to clipboard. Please use the "💾 Download YAML" button instead.\n\nIf on macOS, try: System Settings → Privacy & Security → Screen Recording (allow browser).');
+                this.updateStatus('❌ Copy failed. Try the Download button.');
+            }
         }
     },
 
