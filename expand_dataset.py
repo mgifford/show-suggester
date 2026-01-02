@@ -22,6 +22,7 @@ from urllib.parse import urljoin
 import sys
 import os
 from pathlib import Path
+import time
 
 # Load environment variables from .env file
 try:
@@ -217,7 +218,10 @@ class DataExpander:
         return None
     
     def get_tmdb_poster(self, title, year):
-        """Fetch poster URL from TMDb API"""
+        """Fetch poster URL from TMDb API with rate limiting"""
+        # Rate limiting: 40 requests per second max (TMDb limit is 50)
+        time.sleep(0.025)  # 25ms delay = ~40 requests/second
+        
         try:
             params = {
                 'api_key': TMDB_API_KEY,
@@ -225,6 +229,14 @@ class DataExpander:
                 'year': year
             }
             response = requests.get(TMDB_SEARCH_URL, params=params, timeout=10)
+            
+            # Check for auth errors
+            if response.status_code == 401:
+                print(f"[TMDB] 401 Unauthorized - Check your API key!")
+                print(f"[TMDB] Make sure you're using the 'API Key (v3 auth)' not the 'API Read Access Token'")
+                print(f"[TMDB] Get it from: https://www.themoviedb.org/settings/api")
+                return None
+            
             response.raise_for_status()
             data = response.json()
             
@@ -232,11 +244,10 @@ class DataExpander:
                 poster_path = data['results'][0].get('poster_path')
                 if poster_path:
                     return f"{TMDB_IMAGE_BASE}{poster_path}"
+        except requests.exceptions.RequestException as e:
+            print(f"[TMDB] Request error for '{title}': {e}")
         except Exception as e:
-            print(f"[TMDB] Error fetching poster for {title}: {e}")
-        
-        return None
-            pass
+            print(f"[TMDB] Unexpected error for '{title}': {e}")
         
         return None
     
