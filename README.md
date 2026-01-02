@@ -1,8 +1,8 @@
 # 🎬 Show Suggester
 
-A no-auth, client-side recommendation engine that helps you discover great films and TV shows based on your preferences. Built with vanilla JavaScript and powered by a curated seed dataset of diverse, quality films.
+A no-auth, client-side recommendation engine that helps you discover great films and TV shows based on your preferences. Built with vanilla JavaScript and powered by a curated local seed dataset of diverse, quality films.
 
-**Currently includes:** 100+ carefully curated films from environmental/social justice documentaries, Oscar winners, AFI classics, international cinema, LGBTQ+ films, diverse directors, and more. Plus ~8,000 Bechdel Test-passing films via API.
+**Currently includes:** 104 carefully curated films from 14 diverse sources: environmental documentaries, social justice films, Oscar winners, AFI classics, international cinema, LGBTQ+ films, diverse directors, recent releases, and more. Expandable to thousands via Python updater script.
 
 ## 🎯 Project Goals
 
@@ -16,10 +16,10 @@ A no-auth, client-side recommendation engine that helps you discover great films
 
 ### Try It Now (Locally)
 1. Clone this repository or download the files
-2. Open `index.html` in a modern web browser
-3. The app loads instantly with curated seed films
-4. Bechdel Test films load from API (~8,000 films)
-5. Start rating films!
+2. Open `index.html` in a modern web browser (or use local server: `python3 -m http.server 8765`)
+3. The app loads instantly with 104 curated seed films from `seed-films.json`
+4. Start rating films!
+5. Use Python script to expand dataset (see [SEED_UPDATER.md](SEED_UPDATER.md))
 
 ### Deploy to GitHub Pages
 1. Fork or upload this repository to GitHub
@@ -31,49 +31,57 @@ A no-auth, client-side recommendation engine that helps you discover great films
 
 ## 📖 How to Use
 
-1. **Initial Load**: The app loads instantly with 100+ curated seed films, then fetches Bechdel Test films from API
-2. **Choose Source**: Select seed films, Bechdel Test films, or all combined
-3. **Set Filters**: Filter by year range and film length
-4. **Set Preferences**: Check boxes for genres you like and content to avoid
-5. **Rate Films**: A random batch of 15-20 films appears. Rate each as 👍 Like, 😐 Neutral, or 👎 Dislike
-6. **Add Notes**: Optionally explain why you liked/disliked each film
-7. **Navigate Batches**: Use Previous/Next buttons to browse through batches
-8. **View My Ratings**: Click to see all films you've rated and manage them
-9. **Get Recommendations**: Click "Show Recommendations" to see films similar to ones you liked
-10. **Copy for LLM**: Click "📋 Copy for LLM" to copy your ratings as YAML and paste into ChatGPT/Claude
-11. **Download/Import**: Save your ratings as YAML file to reload later
+1. **Initial Load**: The app loads instantly with 104 curated seed films from local JSON
+2. **Set Filters**: Use dropdown menus to filter by year range (All Years, Last 20 Years, Last 2 Years) and runtime (All Lengths, Short <90min, Medium 90-150min, Long >150min)
+3. **Rate Films**: A random batch of 15-20 films appears with large poster images. Rate each as 👍 Like, 😐 Neutral, or 👎 Dislike
+4. **Add Notes**: Optionally explain why you liked/disliked each film
+5. **Load Random Batch**: Click to load a new set of unrated films (won't repeat recently shown films)
+6. **View My Ratings**: Click to see all films you've rated and manage them
+7. **Get Recommendations**: Click "Show Recommendations" to see films similar to ones you liked
+8. **Copy for LLM**: Click "📋 Copy for LLM" to copy your ratings as YAML and paste into ChatGPT/Claude for personalized suggestions
+9. **Export/Import**: Save your ratings as YAML file to reload later or share
 
 ## 🎯 Features
 
-- **Instant Loading**: Curated seed dataset loads immediately from static JSON file
-- **Diverse Sources**: 
-  - Environmental/social justice documentaries (An Inconvenient Truth, 13th, Blackfish)
-  - Oscar Best Picture winners (recent and classic)
-  - AFI Top 100 classics (Citizen Kane, Casablanca, The Godfather)
-  - International cinema (Roma, Parasite, Amélie, City of God)
-  - LGBTQ+ films (Pride, Carol, Call Me by Your Name)
-  - Films by diverse directors (Ava DuVernay, Barry Jenkins, Greta Gerwig)
-  - ~8,000 Bechdel Test-passing films via API
-- **Smart Filters**: 
-  - **Year Range**: All, Last 20 Years, Last 2 Years
-  - **Runtime**: All, Short (<90 min), Medium (90-150 min), Long (>150 min)
-- **My Ratings View**: See all rated films with ability to remove ratings
-- **Ethically-Curated**: Films with environmental and social justice themes
-- **Smart Recommendations**: Content-based filtering using genres, directors, cast, runtime, and release years
-- **Quick Preferences**: Checkbox selections for genres and content to avoid
-- **User Ratings**: Rate films with optional explanatory notes
-- **Batch Navigation**: Previous/Next buttons to browse through film batches
-- **Film Posters**: Visual memory aids from Wikidata
-- **Where to Watch**: Direct links to JustWatch (Canada/UK) and Netflix search
-- **Copy for LLM**: One-click copy to clipboard in YAML format for AI analysis
-- **Export/Import**: Save and restore all your data in YAML format
-- **Offline Mode**: Works without internet after initial load
-- **No Backend Required**: Runs entirely in the browser
-- **Privacy-First**: All data stored locally in your browser only
+### User Interface
+- **Full-Width Responsive Layout**: Desktop mode has resizable sidebar (33.33% width, adjustable) + main content area
+- **Mobile-Optimized**: Single-column layout with sidebar on top, simplified controls
+- **Large Film Posters**: 400px poster images as primary visual element (300px on mobile)
+- **Elegant Dropdown Filters**: Year range (All, Last 20, Last 2) and runtime (All, Short <90min, Medium 90-150min, Long >150min)
+- **My Ratings View**: Collapsible section showing all rated films with ability to remove ratings
+- **Recently Shown Tracking**: Random batches avoid showing the same films repeatedly
 
-## Architecture Overview
+### Data & Privacy
+- **Instant Loading**: 104 curated films load immediately from local `seed-films.json`
+- **Diverse Curated Sources**: 
+  - Recent releases (13.5%)
+  - Oscar winners (9.6%)
+  - Social justice films (9.6%)
+  - International cinema (8.7%)
+  - Environmental documentaries (7.7%)
+  - Modern classics (7.7%)
+  - AFI Top 100 (6.7%)
+  - Diverse directors (6.7%)
+  - Popular films (6.7%)
+  - LGBTQ+ films (4.8%)
+  - Documentary (4.8%)
+  - Sci-Fi (4.8%)
+  - Animation (4.8%)
+  - Fantasy (3.8%)
+- **Expandable Dataset**: Python script (`update_seed_films.py`) can add thousands more films from Bechdel Test API and other sources
+- **100% Offline**: Works completely offline after initial page load
+- **Privacy-First**: All ratings stored only in browser localStorage, nothing sent to servers
+- **No Authentication**: Zero login, zero API keys, zero configuration
 
-### Data Flow
+### Intelligence & Export
+- **Smart Recommendations**: Content-based filtering using genres (high weight), directors (medium), cast overlap (medium), year proximity (low)
+- **LLM Export**: One-click copy to clipboard in YAML format for ChatGPT/Claude analysis
+- **YAML Import/Export**: Save and restore all ratings with human-readable format
+- **Where to Watch**: Direct links to JustWatch (Canada/UK) and streaming search
+
+## 🏗️ Architecture Overview
+
+### Current Data Flow
 
 ```
 ┌─────────────────┐
@@ -82,198 +90,150 @@ A no-auth, client-side recommendation engine that helps you discover great films
          │
          ▼
 ┌─────────────────────────────────┐
-│  Wikidata SPARQL Query          │
-│  (Best Picture Winners/Nominees)│
+│  Load Local JSON                │
+│  (seed-films.json)              │
+│  104 curated films              │
 └────────┬────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────┐
-│  Normalize to Stable IDs        │
-│  - QID (Wikidata)               │
-│  - IMDb ID (if available)       │
+│  Apply Filters                  │
+│  - Year (dropdown)              │
+│  - Runtime (dropdown)           │
+│  allFilms → films (filtered)    │
 └────────┬────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────┐
-│  Random Selection (10-20)       │
-│  Present for User Rating        │
+│  Random Batch Selection         │
+│  15-20 unrated films            │
+│  Avoid recentlyShownQIDs        │
 └────────┬────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────┐
-│  User Interaction               │
-│  - Like/Dislike/Neutral         │
-│  - Add text notes               │
+│  User Rating                    │
+│  - Like/Neutral/Dislike         │
+│  - Optional notes               │
+│  - Stored in localStorage       │
 └────────┬────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────┐
 │  Recommendation Engine          │
 │  Content-Based Similarity:      │
-│  - Genres (high weight)         │
-│  - Director (medium weight)     │
-│  - Cast overlap (medium weight) │
-│  - Year proximity (low weight)  │
+│  - Genres (weight: 5.0)         │
+│  - Directors (weight: 3.0)      │
+│  - Cast overlap (weight: 2.0)   │
+│  - Year proximity (weight: 1.0) │
 └────────┬────────────────────────┘
          │
          ▼
 ┌─────────────────────────────────┐
 │  Display Recommendations        │
-│  + JustWatch Links (CA/UK)      │
-│  + Provider Search Links        │
+│  + Large poster images          │
+│  + JustWatch links (CA/UK)      │
+│  + YAML export for LLMs         │
 └─────────────────────────────────┘
 ```
 
-### Optional Validation Flow
+### Dataset Expansion (Optional)
 
 ```
 ┌──────────────────────┐
-│  Sanity Check Only   │
-│  Wikipedia API       │
-│  (Best Picture page) │
-└──────────────────────┘
-         │
-         ▼
-   Compare count/
-   coverage with
-   Wikidata results
+│  Python Script       │
+│  update_seed_films.py│
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────────────────┐
+│  Fetch from Bechdel Test API     │
+│  (requires: pip install requests)│
+└──────────┬───────────────────────┘
+           │
+           ▼
+┌──────────────────────────────────┐
+│  Deduplicate & Add to JSON       │
+│  seed-films.json updated         │
+└──────────────────────────────────┘
 ```
 
-## Data Objects & Schema
+## 📊 Data Objects & Schema
 
-### Core Movie Object
+### Show Object (seed-films.json)
 
 ```javascript
 {
-  qid: "Q104123",              // Wikidata QID (stable identifier)
+  qid: "bechdel-tt6751668",     // Unique identifier (can be custom)
   title: "Parasite",
   year: 2019,
-  genres: ["thriller", "drama", "dark comedy"],
-  directors: ["Bong Joon-ho"],
-  cast: ["Song Kang-ho", "Lee Sun-kyun", "Cho Yeo-jeong"],
-  imdbId: "tt6751668",         // Optional
-  isWinner: true,              // Winner vs nominee
-  rating: null                 // null | "like" | "dislike" | "neutral"
-  note: ""                     // User's free-text note
+  genres: ["thriller", "drama"], // Optional but recommended
+  directors: ["Bong Joon-ho"],  // Optional
+  cast: ["Song Kang-ho"],       // Optional
+  imdbId: "tt6751668",          // Optional
+  runtime: 132,                  // Optional (minutes)
+  source: "oscars"               // Required: data source tag
 }
 ```
 
-### User Ratings Object (In-Memory State)
+### Ratings Object (localStorage)
 
 ```javascript
 {
-  movies: [ /* array of Movie objects */ ],
-  ratings: {
-    "Q104123": {
-      rating: "like",
-      note: "Brilliant social commentary and cinematography",
-      timestamp: "2026-01-01T12:34:56Z"
-    }
-  },
-  sessionStarted: "2026-01-01T12:00:00Z"
+  "bechdel-tt6751668": {
+    rating: "like",                                    // Required
+    note: "Brilliant social commentary",             // Optional
+    timestamp: "2026-01-01T12:34:56Z"                // Auto-generated
+  }
 }
 ```
 
-### JSON Export Schema
+### YAML Export Format (for LLMs)
 
-```json
-{
-  "version": "1.0",
-  "exportedAt": "2026-01-01T12:34:56Z",
-  "sourceInfo": {
-    "dataSource": "Wikidata Query Service",
-    "queryDate": "2026-01-01T12:00:00Z",
-    "totalTitles": 543,
-    "scope": "Academy Award for Best Picture (all years)"
-  },
-  "ratings": [
-    {
-      "qid": "Q104123",
-      "title": "Parasite",
-      "year": 2019,
-      "rating": "like",
-      "note": "Brilliant social commentary and cinematography",
-      "ratedAt": "2026-01-01T12:15:00Z"
-    }
-  ]
-}
-```
-
-### LLM Export Text Format
-
-```
-=== LIKED MOVIES ===
+```yaml
+=== LIKED FILMS ===
 1. Parasite (2019)
    → Brilliant social commentary and cinematography
 
-2. The Godfather (1972)
-   → Perfect pacing, iconic performances
+2. Moonlight (2016)
+   → Beautiful, intimate storytelling
 
-=== DISLIKED MOVIES ===
+=== DISLIKED FILMS ===
 1. Crash (2004)
    → Heavy-handed and predictable
 
 === REQUEST FOR AI ===
-Based on the movies I liked and disliked above, please suggest 5-10 similar films.
-Constraints:
-- Prefer critically acclaimed or award-winning titles
-- Focus on [genres from liked films]
-- Avoid [themes from disliked films]
+Based on the films I liked and disliked above, please suggest 5-10 similar films.
 ```
 
-## SPARQL Query Outline
+## 🐍 Python Updater Script
 
-### Primary Query: Get Oscar Best Picture Data
+### Expanding the Dataset
 
-```sparql
-SELECT DISTINCT ?film ?filmLabel ?year ?genreLabel ?directorLabel ?actorLabel ?imdbId ?isWinner
-WHERE {
-  # Films nominated for or winning Best Picture
-  {
-    ?film wdt:P166 wd:Q102427 .  # Winner of Academy Award for Best Picture
-    BIND(true as ?isWinner)
-  }
-  UNION
-  {
-    ?film wdt:P1411 wd:Q102427 . # Nominated for Best Picture
-    BIND(false as ?isWinner)
-  }
-  
-  # Get metadata
-  OPTIONAL { ?film wdt:P577 ?publicationDate . }  # Publication date
-  OPTIONAL { ?film wdt:P136 ?genre . }            # Genre
-  OPTIONAL { ?film wdt:P57 ?director . }          # Director
-  OPTIONAL { ?film wdt:P161 ?actor . }            # Cast member
-  OPTIONAL { ?film wdt:P345 ?imdbId . }           # IMDb ID
-  
-  # Extract year from date
-  BIND(YEAR(?publicationDate) as ?year)
-  
-  # Get labels
-  SERVICE wikibase:label { bd:serviceParam wikibase:language "en". }
-}
-ORDER BY DESC(?year)
+Use `update_seed_films.py` to maintain and expand the seed dataset:
+
+```bash
+# Show current dataset statistics
+python3 update_seed_films.py --stats
+
+# Add films from Bechdel Test API (requires: pip install requests)
+python3 update_seed_films.py --add-bechdel --limit 1000 --min-rating 3
+
+# Remove duplicate films
+python3 update_seed_films.py --deduplicate
+
+# Combine operations
+python3 update_seed_films.py --add-bechdel --limit 500 --deduplicate --stats
 ```
 
-**Notes:**
-- Returns multiple rows per film (one per genre, director, actor)
-- Client-side post-processing required to aggregate into single movie objects
-- Optional fields handled gracefully
-- Language set to English for labels
+### Script Features
+- **Stats**: Show comprehensive dataset statistics (sources, decades, metadata coverage)
+- **Bechdel API**: Fetch films passing Bechdel Test
+- **Deduplication**: Remove duplicate entries by QID
+- **Graceful Degradation**: Works without `requests` module for stats/deduplication
+- **JSON Management**: Updates timestamp and version on save
 
-### Validation Query (Wikipedia Fallback)
-
-Use MediaWiki Action API to fetch:
-```
-https://en.wikipedia.org/w/api.php?
-  action=parse&
-  page=Academy_Award_for_Best_Picture&
-  prop=wikitext&
-  format=json&
-  origin=*
-```
-
-Parse the wikitext to extract year ranges and compare total count with Wikidata results.
+See [SEED_UPDATER.md](SEED_UPDATER.md) for complete documentation.
 
 ## Recommendation Algorithm
 
@@ -399,10 +359,14 @@ function generateJustWatchLinks(movie) {
 
 ```
 show-suggester/
-├── index.html       # Main UI and structure
-├── app.js          # Application logic (ratings, recommendations, export)
-├── ARCHITECTURE.md # Detailed technical documentation
-└── README.md       # This file
+├── index.html            # Main UI (full-width responsive layout)
+├── app.js                # Application logic (~1550 lines)
+├── seed-films.json       # Curated dataset (104 films from 14 sources)
+├── update_seed_films.py  # Python script to expand dataset
+├── ARCHITECTURE.md       # Detailed technical documentation
+├── AGENTS.md             # AI agent development guidelines
+├── SEED_UPDATER.md       # Python script documentation
+└── README.md             # This file
 ```
 
 ## 🔒 Privacy & Security
@@ -416,27 +380,31 @@ show-suggester/
 
 ## 🐛 Troubleshooting
 
-**Stuck on "Loading..."?**
-- Check internet connection
-- Refresh the page
-- Check browser console for errors
-- Wikidata Query Service may be temporarily unavailable
+**Films not loading?**
+- Check that `seed-films.json` exists in the same directory as `index.html`
+- Open browser console (F12) for error messages
+- Try running with local server: `python3 -m http.server 8765`
 
-**Missing some Oscar films?**
-- SPARQL query limits to 5000 results to prevent timeouts
-- Very old nominations may have incomplete Wikidata records
-- Films without release year are filtered out
+**Filters not working?**
+- Make sure you click "Load Random Batch" after changing filters
+- Check that films matching your filter criteria exist in the dataset
+- Status message shows how many films match current filters
 
 **Recommendations seem off?**
-- Rate more films (at least 5-10 "likes") for better accuracy
-- Algorithm is simple content-based filtering
-- Try the LLM export for human-guided suggestions
+- Rate at least 5-10 films as "like" for better accuracy
+- Algorithm uses content-based filtering (genres, directors, cast, year)
+- Try the LLM export for personalized AI-guided suggestions
+
+**Python script errors?**
+- For `--stats` and `--deduplicate`: no dependencies needed
+- For `--add-bechdel`: requires `pip install requests`
+- See [SEED_UPDATER.md](SEED_UPDATER.md) for detailed troubleshooting
 
 ## 📚 Learn More
 
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Complete technical documentation including data flow, schemas, SPARQL queries, and algorithm details
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Complete technical documentation including data flow, schemas, and algorithm details
 - **[AGENTS.md](AGENTS.md)** - Development guidelines for AI assistants and developers to maintain consistency
-- **[TESTING.md](TESTING.md)** - Comprehensive testing guide and checklists
+- **[SEED_UPDATER.md](SEED_UPDATER.md)** - Python script documentation for dataset management
 
 ## 🙏 Acknowledgments
 

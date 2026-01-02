@@ -5,12 +5,12 @@ This document provides guidance for AI assistants and developers working on the 
 ## Project Philosophy
 
 ### Core Principles
-1. **Privacy-First**: No user data leaves the browser. No tracking, no analytics, no server calls except to public APIs.
+1. **Privacy-First**: No user data leaves the browser. No tracking, no analytics, no external API calls during normal use.
 2. **No-Auth by Design**: Zero authentication, zero API keys, zero configuration required.
-3. **Multiple Data Sources**: Support curated lists from various sources (Wikidata, Bechdel Test, APIs, static JSON, etc.).
+3. **Local-First Data**: Curated seed dataset stored in local JSON files. Optional Python script to expand dataset offline.
 4. **Explainable Recommendations**: Content-based filtering with visible weights. Users should understand why shows are recommended.
 5. **No Build Required to Run**: Vanilla JavaScript, HTML, CSS core. Must work by opening index.html directly. NPM/build tools OK for optional dev workflow.
-6. **Offline-First**: Cache data in localStorage for offline functionality. App must work without network connection.
+6. **Offline-First**: Works completely offline after initial page load. All data in local JSON files.
 7. **Extensible**: Support films AND TV shows from any quality-curated source (awards, Bechdel Test, critic lists, streaming platforms, etc.).
 
 ### Non-Negotiables
@@ -19,9 +19,11 @@ This document provides guidance for AI assistants and developers working on the 
 - ❌ No API keys or authentication
 - ❌ No web scraping
 - ❌ No tracking or external data collection
+- ❌ No API calls during normal app usage (data from local JSON files only)
 - ✅ Must work on GitHub Pages by opening index.html
-- ✅ Must work offline after initial data load
+- ✅ Must work completely offline (no internet required after page load)
 - ✅ Must be auditable (readable source code)
+- ✅ Python script OK for offline dataset expansion (optional tool)
 
 ## Architecture Reference
 
@@ -83,49 +85,62 @@ calc() // bad
 - Keep inline styles minimal (use CSS classes)
 
 **CSS:**
-- Mobile-first responsive design
-- Use CSS Grid and Flexbox
+- Full-width responsive design
+- Desktop: Flexbox sidebar (resizable, 33.33% width, min 300px, max 500px) + main content area
+- Mobile: Stacked layout with sidebar on top, single-column film grid
+- Use CSS Grid for film card layout: `grid-template-columns: repeat(auto-fill, minmax(350px, 1fr))`
+- Use CSS Flexbox for sidebar/main layout
+- Large poster images (400px desktop, 300px mobile)
 - Maintain consistent color scheme (#667eea primary)
 - Use CSS custom properties for theme values
 
 ### Common Tasks
 
-#### Modifying the SPARQL Query
+#### Managing the Seed Dataset
 
-**Location:** `app.js` → `loadFilmsFromWikidata()` method
+**Location:** `update_seed_films.py` - Python script for dataset management
 
-**Process:**
-1. Test query at https://query.wikidata.org/
-2. Check for performance (should complete in <30 seconds)
-3. Verify LIMIT is reasonable (5000 max)
-4. Update `processWikidataResults()` if new fields added
-5. Update Film object schema in ARCHITECTURE.md
+**Current dataset:**
+- 104 curated films from 14 diverse sources
+- Stored in `seed-films.json`
+- Sources: recent, oscars, social-justice, international, environmental, modern, afi-classics, diverse-directors, popular, lgbtq, documentary, sci-fi, animation, fantasy
 
-**Example - Adding runtime:**
-```javascript
-// In SPARQL query
-OPTIONAL { ?film wdt:P2047 ?runtime . }  # Runtime in minutes
+**Common operations:**
 
-// In processWikidataResults()
-runtime: binding.runtime?.value ? parseInt(binding.runtime.value) : null
+```bash
+# View statistics
+python3 update_seed_films.py --stats
+
+# Add Bechdel Test films (requires: pip install requests)
+python3 update_seed_films.py --add-bechdel --limit 1000 --min-rating 3
+
+# Remove duplicates
+python3 update_seed_films.py --deduplicate
 ```
 
-**Example - Adding different award category:**
-```javascript
-// Create new SPARQL query function
-async loadBAFTAFilms() {
-  const sparqlQuery = `
-  SELECT DISTINCT ?film ?filmLabel ...
-  WHERE {
-    { ?film wdt:P166 wd:Q271394 . }  # BAFTA Best Film
-    UNION
-    { ?film wdt:P1411 wd:Q271394 . } # Nominated for BAFTA
-    ...
-  }`;
-  // Process similarly
-}
+**When expanding dataset:**
+1. Test script with `--stats` first
+2. Use `--deduplicate` after adding films from external sources
+3. Keep QID format consistent (e.g., `bechdel-tt1234567`)
+4. Update Film object schema in ARCHITECTURE.md if adding new fields
+5. Consider creating separate JSON files for very large datasets (e.g., `bechdel-films.json`)
 
-// Add UI toggle to switch between award categories
+**Example - Adding new data source:**
+```python
+# In update_seed_films.py
+def fetch_criterion_films(limit=100):
+    """Fetch films from Criterion Collection."""
+    # Implement API call or manual list
+    return [
+        {
+            "qid": f"criterion-{spine_number}",
+            "title": "Film Title",
+            "year": 1950,
+            "genres": ["classic"],
+            "directors": ["Director Name"],
+            "source": "criterion"
+        }
+    ]
 ```
 
 #### Changing Recommendation Weights
@@ -159,15 +174,21 @@ async loadBAFTAFilms() {
 #### Modifying UI
 
 **Locations:**
-- `index.html` for structure
-- `<style>` tag in index.html for styling
+- `index.html` for structure and embedded styles
 - `app.js` for dynamic rendering
+
+**Current UI patterns:**
+- **Sidebar controls**: Use `<select>` dropdowns for filters (year, runtime)
+- **Film cards**: Large poster images (400px height) with metadata below
+- **Responsive layout**: Flexbox for sidebar/main, CSS Grid for film cards
+- **Mobile breakpoint**: 768px - stacks sidebar on top, single-column grid
 
 **Accessibility:**
 - Maintain keyboard navigation
-- Use semantic HTML
+- Use semantic HTML (`<select>`, `<button>`, `<section>`)
 - Provide text alternatives for icons
 - Test with screen readers if possible
+- Ensure color contrast meets WCAG AA standards
 
 ### Data Model Integrity
 
@@ -210,38 +231,42 @@ async loadBAFTAFilms() {
 ### Testing Requirements
 
 **Before committing:**
-1. Open index.html directly in browser → works
-2. Test SPARQL query → completes successfully
-3. Rate 5+ films → recommendations appear
-4. Export JSON → valid format
-5. Import JSON → ratings restore
-6. Clear all ratings → resets cleanly
-7. Check browser console → no errors
+1. Open index.html directly in browser (or via local server) → works
+2. Verify 104 films load from seed-films.json
+3. Test filters (year dropdown, runtime dropdown) → apply correctly
+4. Rate 5+ films → recommendations appear
+5. Load random batch → doesn't repeat recently shown films
+6. "My Ratings" view → shows all rated films (even if filtered out)
+7. Export YAML → valid format
+8. Import YAML → ratings restore
+9. Check browser console → no errors
+10. Test Python script: `python3 update_seed_films.py --stats` → shows correct data
 
 **Cross-browser:**
 - Test in Chrome, Firefox, Safari
 - Test on mobile (iOS/Android)
+- Verify responsive layout (sidebar resizable on desktop, stacked on mobile)
 
 ### Performance Guidelines
 
-**SPARQL Query:**
-- Keep LIMIT ≤ 5000 results
-- Use OPTIONAL for non-critical fields
-- Avoid expensive FILTER operations
-- Target <30 second completion time
+**JSON Loading:**
+- Keep seed JSON files under 5MB for fast loading
+- Consider splitting into multiple files if dataset grows (e.g., seed-films.json, bechdel-films.json)
+- Use `fetch()` with proper error handling
+- Cache parsed JSON in `allFilms` array
 
 **JavaScript:**
 - Batch DOM updates (use DocumentFragment)
 - Cache DOM queries in variables
 - Use event delegation for dynamic content
 - Limit array iterations on large datasets
+- Store unfiltered dataset in `allFilms`, filtered in `films`
 
 **LocalStorage:**
-- Keep ratings object compact
-- Don't store film data (reload from Wikidata)
-- Film cache stored separately as `oscarFilmsCache`
+- Keep ratings object compact (QID keys only)
+- Don't store film data in localStorage (reload from JSON)
 - Implement error handling for quota exceeded
-- Cache includes timestamp and version info
+- Save filter preferences for persistence
 
 ## Common Scenarios
 
@@ -256,53 +281,43 @@ async loadBAFTAFilms() {
 
 ### User Reports: "Page stuck on loading"
 
-**Diagnosis:** SPARQL query timeout or network issue.
+**Diagnosis:** JSON file not found or network issue.
 
 **Fix options:**
-1. Add retry logic with exponential backoff
-2. Add "Retry" button in loading state
-3. Cache successful queries in IndexedDB (future enhancement)
-4. Reduce LIMIT or add pagination
+1. Check that `seed-films.json` exists in same directory as `index.html`
+2. Run with local server: `python3 -m http.server 8765` (CORS issues with file://)
+3. Add retry logic with exponential backoff
+4. Add "Retry" button in loading state
+5. Show more specific error messages in console
 
 ### User Reports: "Show X is missing"
 
-**Diagnosis:** Show might not be in current data sources or missing required fields.
+**Diagnosis:** Show not in current seed dataset.
 
 **Solution:**
-1. Check if show exists in any enabled data sources
-2. If in Wikidata but missing data → improve SPARQL query
-3. If not in any source → add new data source or static JSON entry
-4. Document in README as known limitation or add to requested features
+1. Check if show exists in seed-films.json
+2. If not, add manually to JSON or use Python script to fetch from external source
+3. For Bechdel Test films: `python3 update_seed_films.py --add-bechdel --limit N`
+4. For manual additions: Edit seed-films.json directly (maintain schema)
+5. Document in README as known limitation if unavailable from any source
 
-### User Wants: "Add Emmy-winning TV shows"
+### User Wants: "Add more films from Bechdel Test"
 
-**Analysis:** Natural extension - add Emmy awards as another data source.
-
-**Implementation:**
-1. Create SPARQL query for Emmy winners/nominees (similar to Oscar query)
-2. Add Emmy source card to UI (🏆 Emmys)
-3. Ensure Show schema includes "type" field to distinguish films from TV
-4. Test performance with larger combined dataset
-5. Update ARCHITECTURE.md with Emmy query details
-
-### User Wants: "Add Bechdel Test films"
-
-**Analysis:** Different data source (Bechdel Test API) but compatible with current architecture.
+**Analysis:** Already implemented via Python script.
 
 **Implementation:**
-1. Create `loadBechdelFilms()` function to fetch from https://bechdeltest.com/api/v1/getAllMovies
-2. Cross-reference IMDb IDs with Wikidata to enrich metadata (genres, directors, cast)
-3. Store in `app.bechdelFilms` array with `source: 'bechdel'` field
-4. Add to source selector UI (already implemented)
-5. Update `updateFilmsFromSource()` to include Bechdel films
-6. Test recommendation algorithm with new dataset
-7. Update ARCHITECTURE.md with API details
+1. Ensure requests module installed: `pip install requests`
+2. Run script: `python3 update_seed_films.py --add-bechdel --limit 1000 --min-rating 3`
+3. Script fetches from https://bechdeltest.com/api/v1/getAllMovies
+4. Filters by rating (0-3, where 3 = pass all tests)
+5. Deduplicates by QID
+6. Updates seed-films.json with new films
+7. Refresh browser to load new dataset
 
 **Key considerations:**
-- Bechdel API returns IMDb IDs - need to map to Wikidata QIDs for consistency
-- May have different metadata availability than Oscar films
-- Should work offline after initial load (cache in localStorage like Oscar films)
-- Recommendation algorithm should work identically across all sources
+- Bechdel API may have limited metadata (IMDb ID, year, title only)
+- Can expand to thousands of films, may want separate JSON file
+- Algorithm works identically regardless of source
 
 ## Version Control
 
@@ -351,19 +366,31 @@ refactor: Extract similarity calculation to separate function
 - Social sharing (privacy concerns)
 - Server-side components (violates architecture)
 
-## API Dependencies
+## Data Dependencies
 
-### Wikidata Query Service
-- **Endpoint:** https://query.wikidata.org/sparql
-- **Rate Limits:** Unofficial ~60 req/min
-- **Reliability:** Generally high, occasional timeouts
-- **Fallback:** None (this is the source of truth)
-- **Documentation:** https://www.wikidata.org/wiki/Wikidata:SPARQL_query_service
+### Local JSON Files
+- **Primary**: `seed-films.json` - Curated dataset (104 films)
+- **Format**: JSON with version, timestamp, films array
+- **Schema**: See Show Object Schema section
+- **Extensible**: Can add more JSON files (bechdel-films.json, etc.)
 
-**If Wikidata changes:**
-1. Monitor for SPARQL endpoint changes
-2. Test queries after Wikidata updates
-3. Adapt to property ID changes (rare but possible)
+**If JSON structure changes:**
+1. Update loadAllSeedFiles() in app.js
+2. Update Show Object Schema in ARCHITECTURE.md
+3. Test backward compatibility with existing ratings
+4. Update Python script if needed
+
+### Python Script Dependencies (Optional)
+- **requests**: Required only for `--add-bechdel` operation
+- **Installation**: `pip install requests`
+- **Fallback**: Script works without requests for `--stats` and `--deduplicate`
+
+**Bechdel Test API** (via Python script only)
+- **Endpoint:** https://bechdeltest.com/api/v1/getAllMovies
+- **Rate Limits:** Unknown, use responsibly
+- **Reliability:** Generally high
+- **Fallback**: Script caches results locally
+- **Documentation**: https://bechdeltest.com/api/v1/doc
 
 ### JustWatch (Search Links Only)
 - **Type:** URL generation, no API calls
