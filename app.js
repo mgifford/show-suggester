@@ -812,15 +812,13 @@ LIMIT 5000
     },
 
     calculateSimilarity(film, likedFilms) {
-        // Maximum possible score per liked film
-        const MAX_SCORE_PER_FILM = 5.0 + 3.0 + 2.0 + 1.0; // 11.0
-        let totalScore = 0;
-
-        likedFilms.forEach(liked => {
+        if (likedFilms.length === 0) return 0;
+        
+        // Calculate score against each liked film
+        const scores = likedFilms.map(liked => {
             let score = 0;
 
             // Genre overlap (weight: 5.0)
-            // Highest priority - films share similar genres
             const genreOverlap = this.jaccardSimilarity(
                 new Set(film.genres),
                 new Set(liked.genres)
@@ -828,14 +826,12 @@ LIMIT 5000
             score += genreOverlap * 5.0;
 
             // Director match (weight: 3.0)
-            // Second priority - same director often means similar style
             const directorMatch = film.directorQIDs.some(d => 
                 liked.directorQIDs.includes(d)
             ) ? 1.0 : 0.0;
             score += directorMatch * 3.0;
 
             // Cast overlap (weight: 2.0)
-            // Third priority - shared actors suggest similar tone/genre
             const castOverlap = this.jaccardSimilarity(
                 new Set(film.castQIDs),
                 new Set(liked.castQIDs)
@@ -843,21 +839,22 @@ LIMIT 5000
             score += castOverlap * 2.0;
 
             // Year proximity (weight: 1.0)
-            // Lowest priority - films from similar eras often have similar style
             if (film.year && liked.year) {
                 const yearDiff = Math.abs(film.year - liked.year);
                 const decadeProximity = Math.max(0, 1 - (yearDiff / 100));
                 score += decadeProximity * 1.0;
             }
 
-            totalScore += score;
+            return score;
         });
-
-        // Average across all liked films and normalize to 0-1 range
-        const rawScore = totalScore / likedFilms.length;
-        const normalizedScore = Math.min(rawScore / MAX_SCORE_PER_FILM, 1.0); // Cap at 1.0 (100%)
         
-        return normalizedScore;
+        // For diverse profiles, use the BEST match, not average
+        // This means if someone likes 20 different genres, a film matching one well is still recommended
+        const maxScore = Math.max(...scores);
+        const avgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+        
+        // Blend: 70% best match + 30% average (ensures diversity while rewarding strong matches)
+        return (maxScore * 0.7 + avgScore * 0.3) / 11.0;
     },
 
     jaccardSimilarity(setA, setB) {
@@ -966,9 +963,10 @@ LIMIT 5000
         };
     },
 
-    async copyForLLM() {
+    async copyForLLM(event) {
         const exportData = this.buildExportData();
         const yaml = this.convertToYAML(exportData);
+        const btn = event ? event.currentTarget : null;
         
         // Check if clipboard API is available
         if (!navigator.clipboard) {
@@ -983,15 +981,16 @@ LIMIT 5000
             this.updateStatus('✅ Copied to clipboard! Paste into ChatGPT, Claude, or any LLM.');
             
             // Show temporary success message
-            const btn = event.target;
-            const originalText = btn.textContent;
-            btn.textContent = '✅ Copied!';
-            btn.style.background = '#10b981';
-            
-            setTimeout(() => {
-                btn.textContent = originalText;
-                btn.style.background = '';
-            }, 2000);
+            if (btn) {
+                const originalText = btn.textContent;
+                btn.textContent = '✅ Copied!';
+                btn.style.background = '#10b981';
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.style.background = '';
+                }, 2000);
+            }
         } catch (error) {
             console.error('Clipboard error:', error);
             
@@ -1000,22 +999,26 @@ LIMIT 5000
                 const textArea = document.createElement('textarea');
                 textArea.value = yaml;
                 textArea.style.position = 'fixed';
-                textArea.style.left = '-999999px';
+                textArea.style.top = '-9999px';
+                textArea.style.left = '-9999px';
+                textArea.style.zIndex = '-1';
                 document.body.appendChild(textArea);
+                textArea.focus();
                 textArea.select();
                 const successful = document.execCommand('copy');
                 document.body.removeChild(textArea);
                 
                 if (successful) {
                     this.updateStatus('✅ Copied to clipboard! (using fallback method)');
-                    const btn = event.target;
-                    const originalText = btn.textContent;
-                    btn.textContent = '✅ Copied!';
-                    btn.style.background = '#10b981';
-                    setTimeout(() => {
-                        btn.textContent = originalText;
-                        btn.style.background = '';
-                    }, 2000);
+                    if (btn) {
+                        const originalText = btn.textContent;
+                        btn.textContent = '✅ Copied!';
+                        btn.style.background = '#10b981';
+                        setTimeout(() => {
+                            btn.textContent = originalText;
+                            btn.style.background = '';
+                        }, 2000);
+                    }
                 } else {
                     throw new Error('execCommand failed');
                 }
