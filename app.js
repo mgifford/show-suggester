@@ -869,7 +869,7 @@ LIMIT 5000
     exportData() {
         const exportData = this.buildExportData();
         const yaml = this.convertToYAML(exportData);
-        this.downloadText(yaml, `oscar-ratings-${this.getDateString()}.yaml`);
+        this.downloadText(yaml, `movie-preferences-${this.getDateString()}.yaml`);
     },
 
     buildExportData() {
