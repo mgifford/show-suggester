@@ -1,6 +1,29 @@
 # Contributing to Show Suggester
 
-Thanks for your interest in contributing! 🎬 This project is designed to be accessible to developers of all levels.
+Thanks for your interest in contributing! 🎬 This project is licensed under **AGPL-3.0** (see [LICENSE](LICENSE) for details).
+
+## What AGPL Means
+
+Show Suggester uses the **GNU Affero General Public License v3.0**. Here's what that means for contributors and users:
+
+✅ **You can:**
+- Use the code for commercial projects
+- Modify the code
+- Redistribute the code
+- Use it for SaaS/web services
+
+⚠️ **You must:**
+- Share your source code if you distribute it
+- **If you use this as a web service**, you must provide users with access to the source code (or a way to get it)
+- Use the same license (AGPL-3.0) for derivative works
+
+**Example:** If you deploy Show Suggester on your own domain, AGPL requires you to either:
+1. Keep it open source (GitHub, etc.)
+2. Provide users a way to download/access the source code
+
+This ensures the project stays open and improvements benefit everyone.
+
+[Learn more about AGPL](https://www.gnu.org/licenses/agpl-3.0.html)
 
 ## Ways to Contribute
 
