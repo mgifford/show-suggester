@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oscar Best Picture Recommender</title>
+    <title>Show Suggester - Discover Great Films</title>
     <style>
         * {
             margin: 0;
@@ -399,20 +399,22 @@
 
         .stat-box {
             background: #f0f4ff;
-            padding: 15px;
-            border-radius: 8px;
+            padding: 10px;
+            border-radius: 6px;
             text-align: center;
+            font-size: 0.85em;
         }
 
         .stat-number {
-            font-size: 2em;
+            font-size: 1.5em;
             font-weight: bold;
             color: #667eea;
         }
 
         .stat-label {
-            color: #666;
-            font-size: 0.9em;
+            color: #999;
+            font-size: 0.8em;
+            margin-top: 3px;
         }
 
         .offline-banner {
@@ -734,36 +736,23 @@
                 Initializing...
             </div>
 
-            <div class="stats hidden" id="stats"></div>
-            
-            <div class="section hidden" id="source-section">
-            <h2>Movie Sources</h2>
-            <p style="color: #666; margin-bottom: 15px;">Choose which films to explore:</p>
-            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                <div class="source-card active" id="source-oscars" onclick="app.changeSource('oscars')">
-                    <div style="font-size: 2em; margin-bottom: 10px;">🏆</div>
-                    <div style="font-weight: bold; margin-bottom: 5px;">Curated Seed</div>
-                    <div style="font-size: 0.85em; color: #666;">Diverse ethical & quality films</div>
-                    <div style="font-size: 0.9em; margin-top: 5px; color: #667eea;" id="oscars-count">Loading...</div>
-                </div>
-                <div class="source-card" id="source-bechdel" onclick="app.changeSource('bechdel')">
-                    <div style="font-size: 2em; margin-bottom: 10px;">👭</div>
-                    <div style="font-weight: bold; margin-bottom: 5px;">Bechdel Test Films</div>
-                    <div style="font-size: 0.85em; color: #666;">Films that pass the Bechdel Test</div>
-                    <div style="font-size: 0.9em; margin-top: 5px; color: #667eea;" id="bechdel-count">Loading...</div>
-                </div>
-                <div class="source-card" id="source-all" onclick="app.changeSource('all')">
-                    <div style="font-size: 2em; margin-bottom: 10px;">🎬</div>
-                    <div style="font-weight: bold; margin-bottom: 5px;">All Films</div>
-                    <div style="font-size: 0.85em; color: #666;">Combined from all sources</div>
-                    <div style="font-size: 0.9em; margin-top: 5px; color: #667eea;" id="all-count">0 films</div>
-                </div>
+            <div class="controls" id="controls" style="margin-bottom: 20px;">
+                <button onclick="app.refreshSeedFiles()" title="Refresh film database from JSON files">🔄 Refresh</button>
+                <button onclick="app.toggleDataset()" title="Switch between core (1.5K films) and extended (6K+ films) datasets" id="dataset-toggle-btn">📚 Use Extended Dataset</button>
+                <button onclick="app.copyForLLM()">📋 Copy for LLM</button>
+                <button onclick="app.exportData()">💾 Download YAML</button>
+                <label for="import-file" class="file-label">Import YAML</label>
+                <input type="file" id="import-file" accept=".json,.yaml,.yml" onchange="app.importData(event)">
+                <button onclick="app.clearAllRatings()">Clear All Ratings</button>
             </div>
-        </div>
+
+            <div class="stats hidden" id="stats" style="margin-bottom: 30px; font-size: 0.85em;"></div>
 
         <div class="section hidden filter-section" id="filter-section">
+            <h3 style="margin-bottom: 10px; color: #667eea;">🎯 Recommendation Filters</h3>
+            <p style="font-size: 0.9em; color: #666; margin-bottom: 15px;">These filters only affect recommendations, not films shown for rating. Adjust to refine what types of films the algorithm suggests.</p>
             <div class="filter-group" style="margin-bottom: 15px;">
-                <label for="year-filter" class="filter-label" style="display: block; margin-bottom: 5px; font-weight: bold;">Filter by Year:</label>
+                <label for="year-filter" class="filter-label" style="display: block; margin-bottom: 5px; font-weight: bold;">Prefer Year Range:</label>
                 <select id="year-filter" onchange="app.setYearFilter(this.value)" style="width: 100%; padding: 8px; border: 2px solid #ddd; border-radius: 6px; font-size: 1em; background: white;">
                     <option value="all">All Years</option>
                     <option value="last20">Last 20 Years</option>
@@ -771,7 +760,7 @@
                 </select>
             </div>
             <div class="filter-group" style="margin-bottom: 15px;">
-                <label for="runtime-filter" class="filter-label" style="display: block; margin-bottom: 5px; font-weight: bold;">Filter by Runtime:</label>
+                <label for="runtime-filter" class="filter-label" style="display: block; margin-bottom: 5px; font-weight: bold;">Prefer Runtime:</label>
                 <select id="runtime-filter" onchange="app.setRuntimeFilter(this.value)" style="width: 100%; padding: 8px; border: 2px solid #ddd; border-radius: 6px; font-size: 1em; background: white;">
                     <option value="all">All Lengths</option>
                     <option value="short">Short (&lt;90 min)</option>
@@ -843,17 +832,6 @@
             <button onclick="app.clearPreferences()">🗑️ Clear Preferences</button>
             </div>
         </div>
-
-        <div class="controls" id="controls">
-            <button onclick="app.showRecommendations()">Show Recommendations</button>
-            <button onclick="app.loadNewBatch()">Load Random Batch</button>
-            <button onclick="app.refreshSeedFiles()" title="Refresh film database from JSON files">🔄 Refresh</button>
-            <button onclick="app.copyForLLM()">📋 Copy for LLM</button>
-            <button onclick="app.exportData()">💾 Download YAML</button>
-            <label for="import-file" class="file-label">Import Ratings</label>
-            <input type="file" id="import-file" accept=".json,.yaml,.yml" onchange="app.importData(event)">
-            <button onclick="app.clearAllRatings()">Clear All Ratings</button>
-        </div>
         </div>
         <!-- End Sidebar -->
 
@@ -861,30 +839,41 @@
         <div class="main-content">
         <div class="section" id="rating-section">
             <h2>Rate Films</h2>
+            <p style="color: #666; margin-bottom: 20px;">
+                Rate films to get personalized recommendations. Use Previous/Next to navigate batches.
+            </p>
             <div class="nav-controls">
                 <button onclick="app.previousBatch()" id="prev-batch-btn" disabled>⬅️ Previous Batch</button>
                 <button onclick="app.nextBatch()" id="next-batch-btn">Next Batch ➡️</button>
             </div>
-            <p style="color: #666; margin-bottom: 20px;">
-                Rate films to get personalized recommendations. Use Previous/Next to navigate batches.
-            </p>
             <div class="film-grid" id="rating-grid"></div>
         </div>
 
-        <div class="controls" id="controls">
-            <button onclick="app.showRecommendations()">Show Recommendations</button>
-            <button onclick="app.loadNewBatch()">Load Random Batch</button>
-            <button onclick="app.refreshSeedFiles()" title="Refresh film database from JSON files">🔄 Refresh Films</button>
-            <button onclick="app.copyForLLM()">📋 Copy for LLM</button>
-            <button onclick="app.exportData()">💾 Download YAML</button>
-            <label for="import-file" class="file-label">Import Ratings</label>
-            <input type="file" id="import-file" accept=".json,.yaml,.yml" onchange="app.importData(event)">
-            <button onclick="app.clearAllRatings()">Clear All Ratings</button>
+        <div style="text-align: center; margin: 40px 0;">
+            <button onclick="app.loadNewBatch()" style="padding: 12px 24px; font-size: 1.1em; background: #667eea; color: white; border: none; border-radius: 8px; cursor: pointer;">📚 New Batch</button>
         </div>
 
-        <div class="section hidden" id="recommendations-section">
-            <h2>Recommended For You</h2>
-            <p style="color: #666; margin-bottom: 20px;">Based on your ratings, here are films you might enjoy:</p>
+        <div class="section" id="recommendations-section">
+            <h2>🎯 Recommended For You</h2>
+            <details style="margin-bottom: 20px; background: #f0f4ff; padding: 15px; border-radius: 8px; border-left: 4px solid #667eea;">
+                <summary style="cursor: pointer; font-weight: bold; color: #667eea;">How does the matching algorithm work?</summary>
+                <div style="margin-top: 15px; font-size: 0.95em; color: #333;">
+                    <p style="margin-bottom: 10px;"><strong>Content-Based Filtering</strong> compares each unrated film against your liked films:</p>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li><strong>Genre Similarity</strong> (50% weight) - Films sharing genres with your likes</li>
+                        <li><strong>Director Match</strong> (27% weight) - Films by directors you enjoyed</li>
+                        <li><strong>Cast Overlap</strong> (18% weight) - Films with actors you've liked</li>
+                        <li><strong>Year Proximity</strong> (9% weight) - Films from similar decades/eras</li>
+                    </ul>
+                    <p style="margin-top: 10px; font-size: 0.9em; color: #666;"><em>Match % shows how similar each film is to your combined liked films. 100% = perfect match across all factors.</em></p>
+                </div>
+            </details>
+            <p style="color: #666; margin-bottom: 20px;">
+                Based on <strong>content-based filtering</strong>: matching genres, directors, cast, and release years of films you liked. 
+                <span style="font-size: 0.9em; display: block; margin-top: 5px;">
+                    💡 <em>Tip: These recommendations are ratable too! Rate them to refine future suggestions.</em>
+                </span>
+            </p>
             <div class="film-grid" id="recommendations-grid"></div>
         </div>
         </div>

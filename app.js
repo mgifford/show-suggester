@@ -36,10 +36,20 @@ const app = {
         
         this.updateStats();
         this.loadNewBatch();
+        this.showRecommendations(); // Always show recommendations
         this.hideLoading();
         document.getElementById('filter-section').classList.remove('hidden');
         document.getElementById('my-ratings-section').classList.remove('hidden');
         document.getElementById('controls').classList.remove('hidden');
+        
+        // Update dataset toggle button text
+        const isExtended = localStorage.getItem('useExtendedDataset') === 'true';
+        const btn = document.getElementById('dataset-toggle-btn');
+        if (isExtended) {
+            btn.textContent = '📚 Use Core Dataset';
+            btn.title = 'Switch to core dataset (1.5K recognizable films)';
+        }
+        
         this.showMyRatings();
         this.updateStatus(`Ready! ${this.films.length} films loaded from diverse sources. Rate some films to get personalized recommendations.`);
         
@@ -139,50 +149,58 @@ const app = {
     },
 
     async loadAllSeedFiles() {
-        // List of JSON seed files to load
-        const seedFiles = [
-            'seed-films.json',
-            // Future: 'bechdel-films.json', 'environmental-films.json', etc.
-        ];
+        // Determine which dataset to load based on localStorage preference
+        const useExtended = localStorage.getItem('useExtendedDataset') === 'true';
+        const datasetFile = useExtended ? 'extended-films.json' : 'core-films.json';
         
-        console.log('[SEED] Loading seed files:', seedFiles);
+        console.log(`[SEED] Loading ${useExtended ? 'EXTENDED' : 'CORE'} dataset from ${datasetFile}`);
         const allFilms = [];
         
-        for (const filename of seedFiles) {
+        try {
+            console.log(`[SEED] Fetching ${datasetFile}...`);
+            document.getElementById('loading-message').textContent = `Loading ${datasetFile}...`;
+            
+            const response = await fetch(datasetFile);
+            if (!response.ok) {
+                console.warn(`[SEED] Could not load ${datasetFile}: ${response.status}`);
+                throw new Error(`Failed to load ${datasetFile}`);
+            }
+            
+            const data = await response.json();
+            const films = data.films || [];
+            console.log(`[SEED] Loaded ${films.length} films from ${datasetFile}`);
+            console.log(`[SEED] Dataset info:`, data.description);
+            
+            // Process films to ensure consistent format
+            const processed = films.map(film => ({
+                qid: film.qid || `seed-${film.imdbId}`,
+                title: film.title,
+                year: film.year,
+                genres: film.genres || [],
+                directors: film.directors || [],
+                directorQIDs: film.directorQIDs || [],
+                cast: film.cast || [],
+                castQIDs: film.castQIDs || [],
+                imdbId: film.imdbId,
+                runtime: film.runtime,
+                source: film.source || 'seed',
+                wikidataUrl: film.wikidataUrl,
+                image: film.poster_url || film.image
+            }));
+            
+            allFilms.push(...processed);
+        } catch (error) {
+            console.error(`[SEED] Error loading ${datasetFile}:`, error);
+            // Fallback to seed-films.json if core/extended fails
+            console.log('[SEED] Falling back to seed-films.json...');
             try {
-                console.log(`[SEED] Loading ${filename}...`);
-                document.getElementById('loading-message').textContent = `Loading ${filename}...`;
-                
-                const response = await fetch(filename);
-                if (!response.ok) {
-                    console.warn(`[SEED] Could not load ${filename}: ${response.status}`);
-                    continue;
-                }
-                
-                const data = await response.json();
-                const films = data.films || [];
-                console.log(`[SEED] Loaded ${films.length} films from ${filename}`);
-                
-                // Process films to ensure consistent format
-                const processed = films.map(film => ({
-                    qid: film.qid || `seed-${film.imdbId}`,
-                    title: film.title,
-                    year: film.year,
-                    genres: film.genres || [],
-                    directors: film.directors || [],
-                    directorQIDs: film.directorQIDs || [],
-                    cast: film.cast || [],
-                    castQIDs: film.castQIDs || [],
-                    imdbId: film.imdbId,
-                    runtime: film.runtime,
-                    source: film.source || 'seed',
-                    wikidataUrl: film.wikidataUrl,
-                    image: film.image
-                }));
-                
-                allFilms.push(...processed);
-            } catch (error) {
-                console.error(`[SEED] Error loading ${filename}:`, error);
+                const fallbackResponse = await fetch('seed-films.json');
+                const fallbackData = await fallbackResponse.json();
+                const fallbackFilms = fallbackData.films || [];
+                console.log(`[SEED] Loaded ${fallbackFilms.length} films from fallback`);
+                allFilms.push(...fallbackFilms);
+            } catch (fallbackError) {
+                console.error('[SEED] Fallback also failed:', fallbackError);
             }
         }
         
@@ -384,6 +402,63 @@ LIMIT 5000
         return url.split('/').pop();
     },
 
+    getStarterBatch(unrated) {
+        // Well-known films that most people will recognize and have opinions about
+        const famousFilmTitles = [
+            'The Shawshank Redemption', 'The Godfather', 'The Dark Knight', 'Pulp Fiction',
+            'Forrest Gump', 'Inception', 'Interstellar', 'The Matrix', 'Titanic', 'Avatar',
+            'Jaws', 'E.T.', 'Back to the Future', 'The Avengers', 'Star Wars', 'Raiders of the Lost Ark',
+            'Jurassic Park', 'The Sixth Sense', 'Fight Club', 'Gladiator', 'The Lion King', 'Frozen',
+            'Toy Story', 'Coco', 'The Sound of Music', 'Singin\' in the Rain', 'Breakfast at Tiffany\'s',
+            'Casablanca', 'It\'s a Wonderful Life', 'Gone with the Wind', 'Citizen Kane',
+            'The Silence of the Lambs', 'Jigsaw', 'Se7en', 'The Ring', 'Nightmare on Elm Street',
+            'Alien', 'The Terminator', 'RoboCop', 'Total Recall', 'Predator',
+            'Schindler\'s List', 'Saving Private Ryan', 'Oppenheimer', 'The Pianist', 'Sophie\'s Choice',
+            'Amélie', 'Pan\'s Labyrinth', 'Parasite', 'Everything Everywhere All at Once', 'Crouching Tiger Hidden Dragon',
+            'Eternal Sunshine of the Spotless Mind', 'The Truman Show', 'Groundhog Day', 'When Harry Met Sally', 'Roman Holiday',
+            'Audrey Hepburn', 'Breakfast at Tiffany\'s', 'La La Land', 'Mamma Mia', 'Hairspray',
+            'The Notebook', 'Pride and Prejudice', 'Sense and Sensibility', 'The Time Traveler\'s Wife', 'About Time',
+            'Dune', 'Blade Runner', 'The Fifth Element', 'Twisters', 'Top Gun',
+            'Barbie', 'Oppenheimer', 'Past Lives', 'Poor Things', 'American Fiction',
+            'Killers of the Flower Moon', 'The Iron Claw', 'Anatomy of a Fall', 'Asteroid City', 'The Brutalist'
+        ];
+
+        // Find films matching these titles (case-insensitive)
+        const starterFilms = unrated.filter(film => 
+            famousFilmTitles.some(title => 
+                film.title.toLowerCase().includes(title.toLowerCase()) ||
+                title.toLowerCase().includes(film.title.toLowerCase())
+            )
+        );
+
+        console.log('[STARTER] Found', starterFilms.length, 'famous films for first batch');
+        
+        // If we found some, use them; otherwise fall back to regular batch
+        if (starterFilms.length >= 10) {
+            return starterFilms;
+        }
+        
+        // Fallback: return unrated films, prioritizing older/classic films and well-known sources
+        return unrated
+            .sort((a, b) => {
+                // Prioritize by source (classics first, then recent)
+                const sourceScore = {
+                    'oscars': 0, 'afi-classics': 1, 'popular': 2, 'recent': 3, 'bechdel': 4
+                };
+                const scoreA = sourceScore[a.source] ?? 5;
+                const scoreB = sourceScore[b.source] ?? 5;
+                if (scoreA !== scoreB) return scoreA - scoreB;
+                
+                // Then by year (older classics first, then recent)
+                const yearA = a.year || 0;
+                const yearB = b.year || 0;
+                if (yearA < 1980 && yearB >= 1980) return -1;
+                if (yearA >= 1980 && yearB < 1980) return 1;
+                if (yearA < 1980 && yearB < 1980) return yearB - yearA; // Older first
+                return yearB - yearA; // Newer first for recent films
+            });
+    },
+
     loadNewBatch() {
         console.log('[BATCH] loadNewBatch called, this.films.length:', this.films?.length || 0);
         
@@ -394,26 +469,34 @@ LIMIT 5000
         
         if (unrated.length === 0) {
             console.warn('[BATCH] No unrated films available!');
-            this.updateStatus('You\'ve rated all available films! Click "Show Recommendations" to see suggestions.');
+            this.updateStatus('You\'ve rated all available films! Click "New Batch" to see more.');
             document.getElementById('rating-section').classList.add('hidden');
             return;
         }
 
-        // Filter out recently shown films (keep last 50 shown)
-        let candidates = unrated.filter(f => !this.recentlyShownQIDs.has(f.qid));
-        console.log('[BATCH] Candidates after filtering recently shown:', candidates.length);
-        
-        // If we've filtered out too many, reset the recently shown set
-        if (candidates.length < 20 && unrated.length >= 20) {
-            console.log('[BATCH] Resetting recently shown films to get fresh batch');
-            this.recentlyShownQIDs.clear();
-            candidates = unrated;
-        }
-        
-        // If still not enough candidates, use all unrated
-        if (candidates.length === 0) {
-            console.log('[BATCH] No candidates, using all unrated');
-            candidates = unrated;
+        // Determine candidates based on batch number
+        let candidates;
+        if (this.batchNumber === 0) {
+            // First batch: use starter films (famous/recognizable)
+            candidates = this.getStarterBatch(unrated);
+            console.log('[BATCH] Using starter batch with', candidates.length, 'films');
+        } else {
+            // Subsequent batches: filter out recently shown films (keep last 50 shown)
+            candidates = unrated.filter(f => !this.recentlyShownQIDs.has(f.qid));
+            console.log('[BATCH] Candidates after filtering recently shown:', candidates.length);
+            
+            // If we've filtered out too many, reset the recently shown set
+            if (candidates.length < 20 && unrated.length >= 20) {
+                console.log('[BATCH] Resetting recently shown films to get fresh batch');
+                this.recentlyShownQIDs.clear();
+                candidates = unrated;
+            }
+            
+            // If still not enough candidates, use all unrated
+            if (candidates.length === 0) {
+                console.log('[BATCH] No candidates, using all unrated');
+                candidates = unrated;
+            }
         }
 
         // Increment batch number
@@ -446,7 +529,7 @@ LIMIT 5000
         this.renderRatingSection();
         this.updateNavigationButtons();
         document.getElementById('rating-section').classList.remove('hidden');
-        document.getElementById('recommendations-section').classList.add('hidden');
+        // Don't hide recommendations anymore - let them show by default
         
         // Update status with batch info
         const ratedCount = Object.keys(this.ratings).length;
@@ -514,6 +597,16 @@ LIMIT 5000
         html += this.createWatchLinks(film);
 
         if (showRatingButtons) {
+            const savedTags = rating?.tags || [];
+            const ratingTags = [
+                { key: 'idea-driven', label: '💡 Idea-driven' },
+                { key: 'visually-striking', label: '🎨 Visually striking' },
+                { key: 'emotional', label: '❤️ Emotional' },
+                { key: 'dark-bleak', label: '🌑 Dark/Bleak' },
+                { key: 'comedic-chaos', label: '😂 Comedic chaos' },
+                { key: 'slow-paced', label: '🐌 Slow-paced OK' }
+            ];
+            
             html += `
                 <div class="rating-buttons">
                     <button class="like" onclick="app.rateFilm('${film.qid}', 'like')">👍 Like</button>
@@ -521,6 +614,17 @@ LIMIT 5000
                     <button class="dislike" onclick="app.rateFilm('${film.qid}', 'dislike')">👎 Dislike</button>
                 </div>
                 <input type="text" class="note-input" id="note-${film.qid}" placeholder="Add a note (optional)..." value="${rating?.note || ''}">
+                <div style="margin-top: 10px; padding: 10px; background: #f0f4ff; border-radius: 6px;">
+                    <div style="font-size: 0.85em; margin-bottom: 8px; color: #667eea; font-weight: bold;">Why did you like it? (optional)</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 6px;">
+                        ${ratingTags.map(tag => `
+                            <label style="display: flex; align-items: center; gap: 5px; font-size: 0.85em; cursor: pointer;">
+                                <input type="checkbox" data-qid="${film.qid}" data-tag="${tag.key}" ${savedTags.includes(tag.key) ? 'checked' : ''}>
+                                ${tag.label}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
             `;
         }
 
@@ -552,10 +656,17 @@ LIMIT 5000
         const noteInput = document.getElementById(`note-${qid}`);
         const note = noteInput ? noteInput.value.trim() : '';
         
+        // Collect selected rating tags
+        const tagCheckboxes = document.querySelectorAll(`input[data-qid="${qid}"][type="checkbox"][data-tag]`);
+        const tags = Array.from(tagCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.getAttribute('data-tag'));
+        
         this.ratings[qid] = {
             qid: qid,
             rating: rating,
             note: note,
+            tags: tags,
             timestamp: new Date().toISOString()
         };
 
@@ -563,15 +674,60 @@ LIMIT 5000
         this.updateStats();
         this.showMyRatings();
         
-        // Re-render the card to show the rating
-        this.renderRatingSection();
+        // Update just this card's visual state without re-rendering entire grid
+        const film = this.currentBatch.find(f => f.qid === qid);
+        if (film) {
+            // Find the card element and update its class
+            const cards = document.querySelectorAll('.film-card');
+            cards.forEach(card => {
+                if (card.querySelector(`#note-${qid}`)) {
+                    card.className = 'film-card';
+                    card.classList.add(`rated-${rating}`);
+                }
+            });
+        }
+        
+        // Refresh recommendations without scrolling
+        this.refreshRecommendationsQuietly();
+    },
+    
+    refreshRecommendationsQuietly() {
+        // Update recommendations in place without scrolling
+        const grid = document.getElementById('recommendations-grid');
+        if (!grid) return;
+        
+        const recommendations = this.generateRecommendations();
+        
+        if (recommendations.length === 0) {
+            const likedCount = Object.values(this.ratings).filter(r => r.rating === 'like').length;
+            if (likedCount === 0) {
+                grid.innerHTML = '<p style="color: #999; padding: 20px; text-align: center;">Rate some films as "Like" to get personalized recommendations!</p>';
+            } else {
+                grid.innerHTML = '<p style="color: #999; padding: 20px; text-align: center;">All films rated! Try adjusting filters or use "New Batch".</p>';
+            }
+            return;
+        }
+        
+        // Clear and rebuild recommendations
+        grid.innerHTML = '';
+        recommendations.forEach(({ film, score }) => {
+            const card = this.createFilmCard(film, true, score);
+            grid.appendChild(card);
+        });
     },
 
     showRecommendations() {
         const recommendations = this.generateRecommendations();
         
         if (recommendations.length === 0) {
-            alert('Please rate some films as "Like" first to get recommendations!\n\nTip: Rate at least 5-10 films you enjoyed to get better matches.');
+            const likedCount = Object.values(this.ratings).filter(r => r.rating === 'like').length;
+            
+            if (likedCount === 0) {
+                // No alert - silently show empty recommendations
+                document.getElementById('recommendations-grid').innerHTML = '<p style="color: #999; padding: 20px; text-align: center;">Rate some films to get personalized recommendations!</p>';
+            } else {
+                alert(`All available films have been rated!\n\nYou've liked ${likedCount} films. Try adjusting your filters (year/runtime) to see more options, or use "Copy for LLM" to get AI-powered suggestions beyond our database.`);
+            }
             return;
         }
 
@@ -579,7 +735,7 @@ LIMIT 5000
         grid.innerHTML = '';
 
         recommendations.forEach(({ film, score }) => {
-            const card = this.createFilmCard(film, false, score);
+            const card = this.createFilmCard(film, true, score); // Now ratable!
             grid.appendChild(card);
         });
 
@@ -587,10 +743,31 @@ LIMIT 5000
         
         // Update status
         const likedCount = Object.values(this.ratings).filter(r => r.rating === 'like').length;
-        this.updateStatus(`Showing ${recommendations.length} recommendations based on ${likedCount} films you liked`);
+        const filterInfo = this.getActiveFilterDescription();
+        this.updateStatus(`Showing ${recommendations.length} recommendations based on ${likedCount} films you liked${filterInfo}`);
         
         // Scroll to recommendations
         document.getElementById('recommendations-section').scrollIntoView({ behavior: 'smooth' });
+    },
+
+    getActiveFilterDescription() {
+        const filters = [];
+        if (this.yearFilter !== 'all') {
+            const yearLabels = {
+                'last20': 'last 20 years',
+                'last2': 'last 2 years'
+            };
+            filters.push(yearLabels[this.yearFilter]);
+        }
+        if (this.runtimeFilter !== 'all') {
+            const runtimeLabels = {
+                'short': '<90 min',
+                'medium': '90-150 min',
+                'long': '>150 min'
+            };
+            filters.push(runtimeLabels[this.runtimeFilter]);
+        }
+        return filters.length > 0 ? ` (filtered: ${filters.join(', ')})` : '';
     },
 
     generateRecommendations() {
@@ -604,7 +781,23 @@ LIMIT 5000
         }
 
         // Get unrated films
-        const unratedFilms = this.films.filter(f => !this.ratings[f.qid]);
+        let unratedFilms = this.films.filter(f => !this.ratings[f.qid]);
+        
+        // NOW apply filters to recommendations only
+        const currentYear = new Date().getFullYear();
+        if (this.yearFilter === 'last20') {
+            unratedFilms = unratedFilms.filter(f => f.year && f.year >= currentYear - 20);
+        } else if (this.yearFilter === 'last2') {
+            unratedFilms = unratedFilms.filter(f => f.year && f.year >= currentYear - 2);
+        }
+        
+        if (this.runtimeFilter === 'short') {
+            unratedFilms = unratedFilms.filter(f => f.runtime && f.runtime < 90);
+        } else if (this.runtimeFilter === 'medium') {
+            unratedFilms = unratedFilms.filter(f => f.runtime && f.runtime >= 90 && f.runtime <= 150);
+        } else if (this.runtimeFilter === 'long') {
+            unratedFilms = unratedFilms.filter(f => f.runtime && f.runtime > 150);
+        }
 
         // Calculate similarity scores
         const scoredFilms = unratedFilms.map(film => ({
@@ -619,12 +812,15 @@ LIMIT 5000
     },
 
     calculateSimilarity(film, likedFilms) {
+        // Maximum possible score per liked film
+        const MAX_SCORE_PER_FILM = 5.0 + 3.0 + 2.0 + 1.0; // 11.0
         let totalScore = 0;
 
         likedFilms.forEach(liked => {
             let score = 0;
 
             // Genre overlap (weight: 5.0)
+            // Highest priority - films share similar genres
             const genreOverlap = this.jaccardSimilarity(
                 new Set(film.genres),
                 new Set(liked.genres)
@@ -632,19 +828,22 @@ LIMIT 5000
             score += genreOverlap * 5.0;
 
             // Director match (weight: 3.0)
+            // Second priority - same director often means similar style
             const directorMatch = film.directorQIDs.some(d => 
                 liked.directorQIDs.includes(d)
             ) ? 1.0 : 0.0;
             score += directorMatch * 3.0;
 
             // Cast overlap (weight: 2.0)
+            // Third priority - shared actors suggest similar tone/genre
             const castOverlap = this.jaccardSimilarity(
                 new Set(film.castQIDs),
                 new Set(liked.castQIDs)
             );
             score += castOverlap * 2.0;
 
-            // Decade proximity (weight: 1.0)
+            // Year proximity (weight: 1.0)
+            // Lowest priority - films from similar eras often have similar style
             if (film.year && liked.year) {
                 const yearDiff = Math.abs(film.year - liked.year);
                 const decadeProximity = Math.max(0, 1 - (yearDiff / 100));
@@ -654,8 +853,11 @@ LIMIT 5000
             totalScore += score;
         });
 
-        // Average across all liked films
-        return totalScore / likedFilms.length;
+        // Average across all liked films and normalize to 0-1 range
+        const rawScore = totalScore / likedFilms.length;
+        const normalizedScore = Math.min(rawScore / MAX_SCORE_PER_FILM, 1.0); // Cap at 1.0 (100%)
+        
+        return normalizedScore;
     },
 
     jaccardSimilarity(setA, setB) {
@@ -684,11 +886,12 @@ LIMIT 5000
             if (!film) return;
             
             const filmData = {
-                qid: rating.qid,
                 title: film.title,
                 year: film.year,
+                imdbId: film.imdbId || '',
                 rating: rating.rating,
-                note: rating.note || ''
+                note: rating.note || '',
+                tags: rating.tags || []
             };
             
             if (rating.rating === 'like') likedFilms.push(filmData);
@@ -696,31 +899,63 @@ LIMIT 5000
             else neutralFilms.push(filmData);
         });
         
-        // Build task instruction
-        let taskInstruction = 'As a movie connoisseur, analyze the ratings provided below and suggest films I might enjoy. ';
+        // Analyze patterns from liked films for better LLM prompt
+        const likedTags = {};
+        likedFilms.forEach(film => {
+            film.tags.forEach(tag => {
+                likedTags[tag] = (likedTags[tag] || 0) + 1;
+            });
+        });
+        
+        // Build intelligent task instruction
+        let taskInstruction = `As a film curator, analyze the ratings and tags below. `;
+        
+        if (likedFilms.length > 0) {
+            taskInstruction += `The user liked: ${likedFilms.map(f => f.title).join(', ')}. `;
+            
+            if (Object.keys(likedTags).length > 0) {
+                const topTags = Object.entries(likedTags)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 3)
+                    .map(([tag]) => tag)
+                    .join(', ');
+                taskInstruction += `Pattern: ${topTags}. `;
+            }
+            
+            taskInstruction += `Recommend 10-15 critically acclaimed, award-winning films matching these patterns. Explain why each film fits. `;
+        } else {
+            taskInstruction += `The user has not yet rated liked films. `;
+        }
         
         if (this.preferences.description) {
-            taskInstruction += `Consider that: ${this.preferences.description}. `;
+            taskInstruction += `Additional context: ${this.preferences.description}. `;
         }
         
-        if (this.preferences.preferredGenres && this.preferences.preferredGenres.length > 0) {
-            taskInstruction += `I prefer these genres: ${this.preferences.preferredGenres.join(', ')}. `;
-        }
+        taskInstruction += 'For each recommendation, include a JustWatch link (no API key needed).';
         
-        if (this.preferences.avoidContent && this.preferences.avoidContent.length > 0) {
-            taskInstruction += `Please avoid suggesting films with: ${this.preferences.avoidContent.join(', ')}. `;
-        }
-        
-        taskInstruction += 'Focus on critically acclaimed, award-winning titles.';
+        const isExtended = localStorage.getItem('useExtendedDataset') === 'true';
         
         return {
-            task: taskInstruction,
-            version: '1.0',
-            exportDate: new Date().toISOString(),
-            sourceInfo: {
-                dataSource: 'Wikidata SPARQL',
-                scope: 'Academy Award for Best Picture (all years)',
-                totalFilms: this.films.length
+            metadata: {
+                task: taskInstruction,
+                version: '2.0',
+                exportDate: new Date().toISOString(),
+                dataset: isExtended ? 'extended' : 'core',
+                dataSource: 'Show Suggester (Bechdel Test API + curated sources)',
+                scope: 'Award-winning and critically acclaimed films',
+                totalFilmsRated: Object.keys(this.ratings).length,
+                dataQuality: likedFilms.length === 0 ? 'low' : 'improving',
+                recommendations: [
+                    'Add why you liked each film in the note field',
+                    'Use rating tags to clarify mood/tone preferences',
+                    'Rate films across different decades for better pattern detection'
+                ]
+            },
+            statistics: {
+                totalRated: likedFilms.length + dislikedFilms.length + neutralFilms.length,
+                liked: likedFilms.length,
+                disliked: dislikedFilms.length,
+                neutral: neutralFilms.length
             },
             preferences: {
                 description: this.preferences.description || '',
@@ -751,9 +986,8 @@ LIMIT 5000
             }, 2000);
         } catch (error) {
             console.error('Failed to copy:', error);
-            // Fallback: download as file
-            this.downloadText(yaml, `oscar-llm-prompt-${this.getDateString()}.yaml`);
-            this.updateStatus('Could not copy to clipboard. File downloaded instead.');
+            alert('Could not copy to clipboard. Please use the "💾 Download YAML" button instead, or check browser permissions.');
+            this.updateStatus('❌ Copy failed. Try the Download button or check permissions.');
         }
     },
 
@@ -857,10 +1091,6 @@ LIMIT 5000
         const neutral = Object.values(this.ratings).filter(r => r.rating === 'neutral').length;
 
         const statsHtml = `
-            <div class="stat-box">
-                <div class="stat-number">${this.films.length}</div>
-                <div class="stat-label">Total Films</div>
-            </div>
             <div class="stat-box">
                 <div class="stat-number">${totalRatings}</div>
                 <div class="stat-label">Rated</div>
@@ -1071,11 +1301,32 @@ LIMIT 5000
             await this.loadAllSeedFiles();
             this.updateStats();
             this.loadNewBatch();
+            this.showRecommendations();
             this.updateStatus(`Successfully loaded ${this.films.length} films!`);
         } catch (error) {
             console.error('[REFRESH] Failed to refresh seed files:', error);
             this.updateStatus(`Failed to refresh: ${error.message}`);
         }
+    },
+
+    async toggleDataset() {
+        const isCurrentlyExtended = localStorage.getItem('useExtendedDataset') === 'true';
+        const newValue = !isCurrentlyExtended;
+        
+        localStorage.setItem('useExtendedDataset', newValue.toString());
+        
+        const btn = document.getElementById('dataset-toggle-btn');
+        if (newValue) {
+            btn.textContent = '📚 Use Core Dataset';
+            btn.title = 'Switch to core dataset (1.5K recognizable films)';
+            this.updateStatus('Switching to extended dataset (6K+ films)...');
+        } else {
+            btn.textContent = '📚 Use Extended Dataset';
+            btn.title = 'Switch to extended dataset (6K+ films)';
+            this.updateStatus('Switching to core dataset (1.5K films)...');
+        }
+        
+        await this.refreshSeedFiles();
     },
 
     changeSource(source) {
@@ -1125,6 +1376,25 @@ LIMIT 5000
         }
     },
 
+    // Check if filters result in 0 films and reset if needed
+    validateFilters() {
+        if (this.films.length === 0 && this.allFilms.length > 0) {
+            console.warn('[FILTERS] Current filters result in 0 films, resetting to defaults');
+            this.yearFilter = 'all';
+            this.runtimeFilter = 'all';
+            this.saveFilters();
+            this.applyFilters();
+            
+            // Update UI
+            const yearSelect = document.getElementById('year-filter');
+            const runtimeSelect = document.getElementById('runtime-filter');
+            if (yearSelect) yearSelect.value = 'all';
+            if (runtimeSelect) runtimeSelect.value = 'all';
+            
+            this.updateStatus(`Filters reset - now showing all ${this.films.length} films`);
+        }
+    },
+
     saveFilters() {
         try {
             localStorage.setItem('oscarYearFilter', this.yearFilter);
@@ -1135,58 +1405,18 @@ LIMIT 5000
     },
 
     applyFilters() {
-        console.log('[FILTERS] Starting applyFilters, this.allFilms.length:', this.allFilms?.length || 0);
+        console.log('[FILTERS] Filters are for recommendations only, not for rating display');
+        // Filters are stored for use in generateRecommendations() but don't affect
+        // which films are shown for rating. Users should be able to rate ALL films.
         if (!this.allFilms || this.allFilms.length === 0) {
-            console.warn('[FILTERS] No films to filter!');
+            console.warn('[FILTERS] No films loaded!');
             this.films = [];
             return;
         }
         
-        console.log('[FILTERS] Year filter:', this.yearFilter, 'Runtime filter:', this.runtimeFilter);
-        let filteredFilms = [...this.allFilms]; // Start with a copy of all films
-        console.log('[FILTERS] Initial films:', filteredFilms.length);
-        
-        // Apply year filter
-        const currentYear = new Date().getFullYear();
-        switch(this.yearFilter) {
-            case 'last20':
-                filteredFilms = filteredFilms.filter(f => f.year && f.year >= currentYear - 20);
-                console.log('[FILTERS] After last20 year filter:', filteredFilms.length);
-                break;
-            case 'last2':
-                filteredFilms = filteredFilms.filter(f => f.year && f.year >= currentYear - 2);
-                console.log('[FILTERS] After last2 year filter:', filteredFilms.length);
-                break;
-            case 'all':
-            default:
-                console.log('[FILTERS] No year filtering applied');
-                // No year filtering
-                break;
-        }
-        
-        // Apply runtime filter
-        switch(this.runtimeFilter) {
-            case 'short':
-                filteredFilms = filteredFilms.filter(f => f.runtime && f.runtime < 90);
-                console.log('[FILTERS] After short runtime filter:', filteredFilms.length);
-                break;
-            case 'medium':
-                filteredFilms = filteredFilms.filter(f => f.runtime && f.runtime >= 90 && f.runtime <= 150);
-                console.log('[FILTERS] After medium runtime filter:', filteredFilms.length);
-                break;
-            case 'long':
-                filteredFilms = filteredFilms.filter(f => f.runtime && f.runtime > 150);
-                console.log('[FILTERS] After long runtime filter:', filteredFilms.length);
-                break;
-            case 'all':
-            default:
-                console.log('[FILTERS] No runtime filtering applied');
-                // No runtime filtering
-                break;
-        }
-        
-        this.films = filteredFilms;
-        console.log('[FILTERS] Final films count:', this.films.length);
+        // For rating: show ALL films
+        this.films = [...this.allFilms];
+        console.log('[FILTERS] Films available for rating:', this.films.length);
     },
 
     setYearFilter(filter) {
@@ -1200,9 +1430,15 @@ LIMIT 5000
         }
         
         this.saveFilters();
-        this.applyFilters();
-        this.loadNewBatch();
-        this.updateStatus(`Filtered to ${filter === 'all' ? 'all years' : filter}. ${this.films.length} films available.`);
+        const filterNames = {
+            'all': 'all years',
+            'last20': 'last 20 years',
+            'last2': 'last 2 years'
+        };
+        this.updateStatus(`Recommendations will prefer ${filterNames[filter]}. Still showing all ${this.films.length} films for rating.`);
+        
+        // Refresh recommendations if visible
+        this.refreshRecommendationsIfVisible();
     },
 
     setRuntimeFilter(filter) {
@@ -1216,8 +1452,6 @@ LIMIT 5000
         }
         
         this.saveFilters();
-        this.applyFilters();
-        this.loadNewBatch();
         
         const filterNames = {
             'all': 'all lengths',
@@ -1225,7 +1459,18 @@ LIMIT 5000
             'medium': 'medium films (90-150 min)',
             'long': 'long films (>150 min)'
         };
-        this.updateStatus(`Filtered to ${filterNames[filter]}. ${this.films.length} films available.`);
+        this.updateStatus(`Recommendations will prefer ${filterNames[filter]}. Still showing all ${this.films.length} films for rating.`);
+        
+        // Refresh recommendations if visible
+        this.refreshRecommendationsIfVisible();
+    },
+
+    refreshRecommendationsIfVisible() {
+        const recsSection = document.getElementById('recommendations-section');
+        if (recsSection && !recsSection.classList.contains('hidden')) {
+            // Recommendations are visible, refresh them
+            this.showRecommendations();
+        }
     },
 
     updateFiltersFromSource() {
@@ -1536,9 +1781,10 @@ LIMIT 5000
     },
 
     escapeHtml(text) {
+        if (!text) return '';
         const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
+        div.innerHTML = text; // Decode HTML entities first
+        return div.textContent; // Then use as plain text (browser auto-escapes in textContent)
     }
 };
 
