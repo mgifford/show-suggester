@@ -507,6 +507,12 @@ Help us find collaborators! Use the copy in [SOCIAL_MEDIA.md](SOCIAL_MEDIA.md) t
 
 **Questions?** Open an [Issue](../../issues) or start a [Discussion](../../discussions).
 
+## AI Disclosure
+
+Yes. AI was used in creating this tool. There be dragons! 
+
+
 ---
 
 **Last Updated:** January 2, 2026
+
